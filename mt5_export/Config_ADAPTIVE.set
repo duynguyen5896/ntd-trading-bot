@@ -1,0 +1,31 @@
+; GridHedgeGold EA - ADAPTIVE Config (Recommended)
+; Best for all market conditions
+; Optimized from Python backtests
+
+InitialCapital=10000.0
+RiskPercent=2.0
+
+; Grid Settings - ADAPTIVE
+GridStep=1.6
+TakeProfit=2.4
+MaxGridLevels=10
+GridSizePercent=3.0
+
+; Hedge Settings
+EnableHedge=true
+HedgeTriggerATR=2.5
+HedgeSizePercent=15.0
+HedgeLeverage=2
+
+; Indicators
+EMAPeriod=50
+ATRPeriod=14
+
+; Risk Management
+MaxDrawdown=29.0
+MaxSpread=0.5
+
+; Order Settings
+MagicNumber=123456
+CommentGrid=GRID
+CommentHedge=HEDGE

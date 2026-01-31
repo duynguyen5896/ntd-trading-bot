@@ -1,0 +1,31 @@
+; GridHedgeGold EA - SCALPING Config
+; High frequency, tight grid
+; For volatile markets with high volume
+
+InitialCapital=10000.0
+RiskPercent=2.5
+
+; Grid Settings - SCALPING
+GridStep=1.2
+TakeProfit=1.8
+MaxGridLevels=12
+GridSizePercent=2.0
+
+; Hedge Settings
+EnableHedge=true
+HedgeTriggerATR=2.0
+HedgeSizePercent=18.0
+HedgeLeverage=2
+
+; Indicators
+EMAPeriod=50
+ATRPeriod=14
+
+; Risk Management
+MaxDrawdown=29.0
+MaxSpread=0.3
+
+; Order Settings
+MagicNumber=123458
+CommentGrid=GRID_SCALP
+CommentHedge=HEDGE_SCALP

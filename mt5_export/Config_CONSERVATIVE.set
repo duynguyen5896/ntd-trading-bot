@@ -1,0 +1,31 @@
+; GridHedgeGold EA - CONSERVATIVE Config
+; Lower risk, wider grid steps
+; Good for beginners and stable returns
+
+InitialCapital=10000.0
+RiskPercent=1.5
+
+; Grid Settings - CONSERVATIVE
+GridStep=2.5
+TakeProfit=3.5
+MaxGridLevels=8
+GridSizePercent=2.5
+
+; Hedge Settings
+EnableHedge=true
+HedgeTriggerATR=3.0
+HedgeSizePercent=12.0
+HedgeLeverage=2
+
+; Indicators
+EMAPeriod=50
+ATRPeriod=14
+
+; Risk Management
+MaxDrawdown=25.0
+MaxSpread=0.5
+
+; Order Settings
+MagicNumber=123457
+CommentGrid=GRID_CONS
+CommentHedge=HEDGE_CONS
