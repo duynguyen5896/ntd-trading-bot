@@ -19,10 +19,11 @@ app = Flask(__name__)
 bot_instance = None
 bot_thread = None
 is_running = False
+startup_error = None
 
 def run_bot():
     """Function to run the bot in a separate thread"""
-    global bot_instance, is_running
+    global bot_instance, is_running, startup_error
     
     print("="*50)
     print("STARTING BOT BACKGROUND THREAD")
@@ -39,13 +40,15 @@ def run_bot():
         print("Bot Mode: LIVE TRADING")
 
     if not api_key or not api_secret:
-        print("❌ CRITICAL: API Keys missing! Bot will not start.")
+        startup_error = "CRITICAL: API Keys missing! Check Render Environment Variables."
+        print(f"❌ {startup_error}")
         return
 
     # Initialize Binance Connector
     bot_connector = BinanceTradingBot(api_key, api_secret, testnet=USE_TESTNET)
     if not bot_connector.test_connection():
-        print("❌ Connection to Binance failed!")
+        startup_error = "Connection to Binance failed! Check API Keys or IP Restrictions."
+        print(f"❌ {startup_error}")
         return
 
     # Initialize Telegram
@@ -58,18 +61,39 @@ def run_bot():
     symbol = 'BTCUSDT'
     bot_instance = LiveGridHedgeBot(bot_connector, symbol, CONFIG_ADAPTIVE, telegram)
     
-    if bot_instance.initialize():
-        print("✅ Bot Initialized Successfully")
-        is_running = True
-        # Run loop
-        bot_instance.start(check_interval=60)
-    else:
-        print("❌ Bot Initialization Failed")
+    try:
+        if bot_instance.initialize():
+            print("✅ Bot Initialized Successfully")
+            is_running = True
+            # Run loop
+            bot_instance.start(check_interval=60)
+        else:
+            startup_error = "Bot Initialization Failed (Data download or balance check failed)"
+            print(f"❌ {startup_error}")
+    except Exception as e:
+        startup_error = f"Exception during start: {str(e)}"
+        print(f"❌ {startup_error}")
 
 @app.route('/')
 def home():
     status = "RUNNING" if is_running else "STOPPED"
-    return f"<h1>Trading Bot Status: {status}</h1><p>Mode: {'TESTNET' if USE_TESTNET else 'LIVE'}</p>"
+    color = "green" if is_running else "red"
+    
+    html = f"""
+    <h1>Trading Bot Status: <span style="color:{color}">{status}</span></h1>
+    <p>Mode: {'TESTNET' if USE_TESTNET else 'LIVE'}</p>
+    """
+    
+    if startup_error:
+        html += f"""
+        <div style="background-color: #fee; color: red; padding: 10px; border: 1px solid red;">
+            <h3>❌ Startup Error:</h3>
+            <pre>{startup_error}</pre>
+        </div>
+        """
+        html += "<p><em>Tip: Check 'Environment' tab in Render Dashboard.</em></p>"
+        
+    return html
 
 @app.route('/health')
 def health():
