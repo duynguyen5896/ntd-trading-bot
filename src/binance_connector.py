@@ -237,6 +237,14 @@ class BinanceTradingBot:
             print(f"❌ Error checking order: {e}")
             return {}
     
+    def get_recent_trades(self, symbol: str, limit: int = 50) -> List[Dict]:
+        """Get recent trades for symbol"""
+        try:
+            return self.client.get_my_trades(symbol=symbol, limit=limit)
+        except BinanceAPIException as e:
+            print(f"❌ Error getting trades: {e}")
+            return []
+
     def get_account_info(self) -> Dict:
         """Get full account information"""
         try:

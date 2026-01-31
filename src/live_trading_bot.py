@@ -77,6 +77,62 @@ class LiveGridHedgeBot:
         if balance < 100:
             print("⚠️ WARNING: Low balance. Get testnet funds at https://testnet.binance.vision/")
         
+        # --- State Recovery (Fix for Restart) ---
+        print("\n🔄 Recovering state from Binance history...")
+        try:
+            trades = self.bot.get_recent_trades(self.symbol, limit=50)
+            # Sort by time asc
+            trades.sort(key=lambda x: x['time'])
+            
+            # Simple FIFO matching to find open buys
+            open_buys = [] 
+            for t in trades:
+                if t['isBuyer']:
+                    open_buys.append({
+                        'price': float(t['price']),
+                        'qty': float(t['qty']),
+                        'qty_left': float(t['qty'])
+                    })
+                else:
+                    # Sell - match against oldest buy (FIFO)
+                    sell_qty = float(t['qty'])
+                    while sell_qty > 0 and open_buys:
+                        buy = open_buys[0]
+                        matched = min(buy['qty_left'], sell_qty)
+                        buy['qty_left'] -= matched
+                        sell_qty -= matched
+                        
+                        if buy['qty_left'] < 0.00000001: # Epsilon
+                            open_buys.pop(0)
+            
+            # Populate grid_positions with remaining open buys
+            self.grid_positions = {}
+            msg_restored = 0
+            for buy in open_buys:
+                if buy['qty_left'] * buy['price'] > 5: # Filter dust
+                    self.grid_positions[buy['price']] = buy['qty_left']
+                    msg_restored += 1
+            
+            if msg_restored > 0:
+                print(f"✅ RESTORED {msg_restored} open positions from history.")
+            else:
+                print("ℹ️ No open positions found in recent history.")
+                
+            # Double check with actual balance
+            base_asset = self.symbol.replace('USDT', '')
+            base_balance = self.bot.get_account_balance(base_asset)
+            current_price = self.update_price()
+            held_value = base_balance * current_price
+            
+            if held_value > 15 and msg_restored == 0:
+                print(f"⚠️ WARNING: You hold ${held_value:.2f} of {base_asset} but no positions were restored.")
+                print("   The bot might seek to BUY more. If this is unintended, sell manually.")
+
+        except Exception as e:
+            print(f"❌ State recovery failed: {e}")
+            import traceback
+            traceback.print_exc()
+            
         return True
     
     def update_price(self) -> float:
