@@ -55,6 +55,7 @@ class TelegramNotifier:
         
         message = f"{icon} <b>{trade_type} {symbol}</b>\n\n"
         message += f"Quantity: <code>{quantity}</code>\n"
+        message += f"Total: <code>${(quantity * price):,.2f}</code>\n"
         message += f"Price: <code>${price:,.2f}</code>\n"
         message += f"Capital: <code>${balance:,.2f}</code>\n"
         
