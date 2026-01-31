@@ -229,13 +229,13 @@ class LiveGridHedgeBot:
         """Calculate current equity"""
         balance = self.bot.get_account_balance('USDT')
         
-        # Add unrealized PnL from grid positions
-        grid_value = sum(
-            (current_price - buy_price) * qty 
-            for buy_price, qty in self.grid_positions.items()
+        # Calculate market value of open positions
+        position_value = sum(
+            qty * current_price 
+            for qty in self.grid_positions.values()
         )
         
-        self.equity = balance + grid_value
+        self.equity = balance + position_value
         
         # Update peak
         if self.equity > self.peak_equity:
