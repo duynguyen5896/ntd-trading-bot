@@ -309,8 +309,8 @@ class LiveGridHedgeBot:
         for buy_price in positions_to_close:
             self.close_grid_position(buy_price, price)
         
-        # Display status
-        self.display_status(price)
+        # Concise status log
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Price: ${price:,.2f} | Eq: ${self.equity:,.2f} | Pos: {len(self.grid_positions)}")
     
     def start(self, check_interval: int = 60):
         """
@@ -353,7 +353,7 @@ class LiveGridHedgeBot:
                     )
                 
                 # Wait for next cycle
-                print(f"\n⏳ Next check in {check_interval} seconds...")
+                # print(f"\n⏳ Next check in {check_interval} seconds...")
                 time.sleep(check_interval)
                 
         except KeyboardInterrupt:
