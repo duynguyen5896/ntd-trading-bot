@@ -39,7 +39,7 @@ class TelegramNotifier:
             return False
     
     def notify_trade(self, trade_type: str, symbol: str, quantity: float, 
-                    price: float, profit: Optional[float] = None):
+                    price: float, balance: float, profit: Optional[float] = None):
         """
         Notify about trade execution
         
@@ -47,7 +47,8 @@ class TelegramNotifier:
             trade_type: 'BUY' or 'SELL'
             symbol: Trading pair (e.g., 'BTCUSDT')
             quantity: Trade quantity
-            price: Execution price
+            price: Executed price
+            balance: Current account balance (USDT)
             profit: Profit amount (for SELL only)
         """
         icon = "🟢" if trade_type == "BUY" else "🔴"
@@ -55,6 +56,7 @@ class TelegramNotifier:
         message = f"{icon} <b>{trade_type} {symbol}</b>\n\n"
         message += f"Quantity: <code>{quantity}</code>\n"
         message += f"Price: <code>${price:,.2f}</code>\n"
+        message += f"Capital: <code>${balance:,.2f}</code>\n"
         
         if profit is not None:
             profit_pct = (profit / (quantity * price)) * 100

@@ -165,10 +165,24 @@ class LiveGridHedgeBot:
             self.total_trades += 1
             print(f"✅ Grid position opened: ${price:,.2f}")
             
+            # Calculate executed price
+            executed_price = price
+            if 'cummulativeQuoteQty' in order and 'executedQty' in order:
+                try:
+                    quote_qty = float(order['cummulativeQuoteQty'])
+                    exec_qty = float(order['executedQty'])
+                    if exec_qty > 0:
+                        executed_price = quote_qty / exec_qty
+                except Exception as e:
+                    print(f"⚠️ Failed to calc executed price: {e}")
+
+            # Get current balance
+            current_balance = self.bot.get_account_balance('USDT')
+            
             # Send Telegram notification
             if self.telegram:
                 self.telegram.notify_trade(
-                    'BUY', self.symbol, quantity, price
+                    'BUY', self.symbol, quantity, executed_price, current_balance
                 )
     
     def close_grid_position(self, buy_price: float, current_price: float):
@@ -191,10 +205,24 @@ class LiveGridHedgeBot:
             self.total_trades += 1
             print(f"✅ Grid closed: ${profit:+.2f} profit")
             
+            # Calculate executed price
+            executed_price = current_price
+            if 'cummulativeQuoteQty' in order and 'executedQty' in order:
+                try:
+                    quote_qty = float(order['cummulativeQuoteQty'])
+                    exec_qty = float(order['executedQty'])
+                    if exec_qty > 0:
+                        executed_price = quote_qty / exec_qty
+                except Exception as e:
+                    print(f"⚠️ Failed to calc executed price: {e}")
+
+            # Get current balance
+            current_balance = self.bot.get_account_balance('USDT')
+
             # Send Telegram notification
             if self.telegram:
                 self.telegram.notify_trade(
-                    'SELL', self.symbol, quantity, current_price, profit
+                    'SELL', self.symbol, quantity, executed_price, current_balance, profit
                 )
     
     def update_equity(self, current_price: float):
