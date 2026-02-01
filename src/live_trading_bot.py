@@ -446,9 +446,18 @@ class LiveGridHedgeBot:
         
         print(f"{'='*70}\n")
         
-        # Send stop notification
         if self.telegram:
             self.telegram.notify_stop(
                 self.symbol, self.start_equity, self.equity,
                 self.total_trades, self.total_profit
             )
+
+    def get_chart_data(self) -> Dict:
+        """Get data for frontend chart"""
+        candles = self.bot.get_latest_candles(self.symbol, interval='1h', limit=100)
+        
+        return {
+            'symbol': self.symbol,
+            'candles': candles,
+            'grid_lines': list(self.grid_positions.keys())
+        }

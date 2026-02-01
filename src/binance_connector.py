@@ -161,7 +161,7 @@ class BinanceTradingBot:
             print(f"❌ Error getting candles: {e}")
             return []
 
-    def get_market_price(self, symbol: str) -> float:
+    def place_market_order(self, symbol: str, side: str, quantity: float) -> Dict:
         """
         Place market order
         

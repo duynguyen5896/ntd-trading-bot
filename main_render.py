@@ -75,109 +75,88 @@ def run_bot():
         startup_error = f"Exception during start: {str(e)}"
         print(f"❌ {startup_error}")
 
+    return "OK", 200
+
+@app.route('/api/data')
+def api_data():
+    """API endpoint for frontend polling"""
+    if bot_instance:
+        chart_data = bot_instance.get_chart_data()
+        price = bot_instance.price_history[-1] if bot_instance.price_history else 0
+        roi = ((bot_instance.equity - bot_instance.start_equity) / bot_instance.start_equity) * 100 if bot_instance.start_equity else 0
+        
+        # Format positions for table
+        positions = []
+        for buy_price, qty in bot_instance.grid_positions.items():
+            pnl = (price - buy_price) * qty
+            pnl_pct = ((price - buy_price) / buy_price) * 100
+            positions.append({
+                'price': buy_price,
+                'qty': qty,
+                'pnl': pnl,
+                'pnl_pct': pnl_pct
+            })
+            
+        return {
+            'status': "RUNNING" if is_running else "STOPPED",
+            'mode': 'TESTNET' if USE_TESTNET else 'LIVE',
+            'price': price,
+            'equity': bot_instance.equity,
+            'roi': roi,
+            'positions': positions,
+            'chart': chart_data
+        }
+    return {}
+
 @app.route('/')
 def home():
-    status = "RUNNING" if is_running else "STOPPED"
     color = "green" if is_running else "red"
-    mode = 'TESTNET' if USE_TESTNET else 'LIVE'
     
-    # Collect Data
-    price = 0
-    equity = 0
-    roi = 0
-    positions_html = "<tr><td colspan='4'>No open positions</td></tr>"
-    
-    if bot_instance:
-        # Price & Equity
-        if bot_instance.price_history:
-            price = bot_instance.price_history[-1]
-        equity = bot_instance.equity
-        start_equity = bot_instance.start_equity
-        if start_equity > 0:
-            roi = ((equity - start_equity) / start_equity) * 100
-            
-        # Positions Table
-        if bot_instance.grid_positions:
-            rows = ""
-            for buy_price, qty in bot_instance.grid_positions.items():
-                pnl = 0
-                pnl_pct = 0
-                if price > 0:
-                    pnl = (price - buy_price) * qty
-                    pnl_pct = ((price - buy_price) / buy_price) * 100
-                
-                rows += f"""
-                <tr>
-                    <td>${buy_price:,.2f}</td>
-                    <td>{qty}</td>
-                    <td style="color: {'green' if pnl>=0 else 'red'}">${pnl:+.2f}</td>
-                    <td style="color: {'green' if pnl_pct>=0 else 'red'}">{pnl_pct:+.2f}%</td>
-                </tr>
-                """
-            positions_html = rows
-
-    # Error Box
-    error_html = ""
-    if startup_error:
-        error_html = f"""
-        <div class="error-box">
-            <h3>❌ Startup Error</h3>
-            <pre>{startup_error}</pre>
-            <p>Check Render 'Environment' variables.</p>
-        </div>
-        """
-
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>Trading Bot Dashboard</title>
-        <meta http-equiv="refresh" content="30"> <!-- Auto refresh -->
+        <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
         <style>
-            body {{ font-family: -apple-system, system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f9; }}
+            body {{ font-family: -apple-system, system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f4f4f9; }}
             .card {{ background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-            .status {{ font-weight: bold; color: {color}; }}
+            .status {{ font-weight: bold; }}
             h1, h2 {{ margin-top: 0; }}
             table {{ width: 100%; border-collapse: collapse; }}
             th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
             th {{ background: #f8f9fa; }}
             .value {{ font-family: monospace; font-size: 1.2em; }}
-            .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+            .grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }}
             .error-box {{ background: #fee; color: #c00; padding: 15px; border-radius: 8px; border: 1px solid #fcc; }}
-            .btn {{ display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }}
-            .btn:hover {{ background: #0056b3; }}
+            #chart {{ width: 100%; height: 400px; }}
         </style>
     </head>
     <body>
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h1>🤖 Trading Bot</h1>
-                <span class="status" style="font-size: 1.5em;">● {status}</span>
+                <span id="status-badge" class="status" style="font-size: 1.5em; color: {color}">● {"RUNNING" if is_running else "STOPPED"}</span>
             </div>
-            {error_html}
             <div class="grid">
                 <div>
-                    <p>Mode: <strong>{mode}</strong></p>
-                    <p>Current Price: <span class="value">${price:,.2f}</span></p>
+                    <p>Current Price</p>
+                    <div id="price" class="value">Loading...</div>
+                </div>
+                 <div>
+                    <p>Total Equity</p>
+                    <div id="equity" class="value">Loading...</div>
                 </div>
                 <div>
-                    <a href="/" class="btn">🔄 Refresh Dashboard</a>
+                    <p>ROI</p>
+                    <div id="roi" class="value">Loading...</div>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h2>💰 Performance</h2>
-            <div class="grid">
-                <div>
-                    <p>Total Equity</p>
-                    <div class="value">${equity:,.2f}</div>
-                </div>
-                <div>
-                    <p>ROI</p>
-                    <div class="value" style="color: {'green' if roi >= 0 else 'red'}">{roi:+.2f}%</div>
-                </div>
-            </div>
+            <h2>📈 Price Chart (1H)</h2>
+            <div id="chart"></div>
         </div>
 
         <div class="card">
@@ -191,11 +170,94 @@ def home():
                         <th>PnL (%)</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {positions_html}
+                <tbody id="positions-table">
+                    <tr><td colspan='4'>Loading...</td></tr>
                 </tbody>
             </table>
         </div>
+
+        <script>
+            // Chart Setup
+            const chartContainer = document.getElementById('chart');
+            const chart = LightweightCharts.createChart(chartContainer, {{
+                width: chartContainer.clientWidth,
+                height: 400,
+                layout: {{ backgroundColor: '#ffffff', textColor: '#333' }},
+                grid: {{ vertLines: {{ color: '#eee' }}, horzLines: {{ color: '#eee' }} }},
+            }});
+            const candleSeries = chart.addCandlestickSeries();
+            
+            // State
+            let gridLines = [];
+
+            async function updateData() {{
+                try {{
+                    const res = await fetch('/api/data');
+                    const data = await res.json();
+                    
+                    if (!data.status) return;
+
+                    // Update DOM
+                    document.getElementById('price').innerText = '$' + data.price.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+                    document.getElementById('equity').innerText = '$' + data.equity.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+                    
+                    const roiElem = document.getElementById('roi');
+                    roiElem.innerText = (data.roi >= 0 ? '+' : '') + data.roi.toFixed(2) + '%';
+                    roiElem.style.color = data.roi >= 0 ? 'green' : 'red';
+                    
+                    // Update Positions Table
+                    const tbody = document.getElementById('positions-table');
+                    if (data.positions.length === 0) {{
+                        tbody.innerHTML = "<tr><td colspan='4'>No open positions</td></tr>";
+                    }} else {{
+                        tbody.innerHTML = data.positions.map(p => `
+                            <tr>
+                                <td>$${{p.price.toLocaleString()}}</td>
+                                <td>${{p.qty}}</td>
+                                <td style="color: ${{p.pnl >= 0 ? 'green' : 'red'}}">$${{p.pnl.toFixed(2)}}</td>
+                                <td style="color: ${{p.pnl_pct >= 0 ? 'green' : 'red'}}">${{p.pnl_pct.toFixed(2)}}%</td>
+                            </tr>
+                        `).join('');
+                    }}
+
+                    // Update Chart
+                    if (data.chart && data.chart.candles) {{
+                        candleSeries.setData(data.chart.candles);
+                        
+                        // Clear old grid lines
+                        gridLines.forEach(l => candleSeries.removePriceLine(l));
+                        gridLines = [];
+                        
+                        // Add new grid lines
+                        if (data.chart.grid_lines) {{
+                            data.chart.grid_lines.forEach(price => {{
+                                const line = candleSeries.createPriceLine({{
+                                    price: price,
+                                    color: 'blue',
+                                    lineWidth: 1,
+                                    lineStyle: LightweightCharts.LineStyle.Dashed,
+                                    axisLabelVisible: true,
+                                    title: 'Grid',
+                                }});
+                                gridLines.push(line);
+                            }});
+                        }}
+                    }}
+
+                }} catch (e) {{
+                    console.error("Fetch error:", e);
+                }}
+            }}
+
+            // Initial Load & Polling
+            updateData();
+            setInterval(updateData, 2000); // Poll every 2 seconds
+            
+            // Resize handler
+            window.addEventListener('resize', () => {{
+                chart.applyOptions({{ width: chartContainer.clientWidth }});
+            }});
+        </script>
     </body>
     </html>
     """
