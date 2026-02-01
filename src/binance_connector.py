@@ -142,7 +142,26 @@ class BinanceTradingBot:
             print(f"❌ Error downloading data: {e}")
             return pd.DataFrame()
     
-    def place_market_order(self, symbol: str, side: str, quantity: float) -> Dict:
+    def get_latest_candles(self, symbol: str, interval: str = '1h', limit: int = 100) -> List[Dict]:
+        """Get latest candles for chart"""
+        try:
+            klines = self.client.get_klines(symbol=symbol, interval=interval, limit=limit)
+            candles = []
+            for k in klines:
+                # k[0] is open time in ms
+                candles.append({
+                    'time': int(k[0] / 1000), # Unix seconds
+                    'open': float(k[1]),
+                    'high': float(k[2]),
+                    'low': float(k[3]),
+                    'close': float(k[4])
+                })
+            return candles
+        except BinanceAPIException as e:
+            print(f"❌ Error getting candles: {e}")
+            return []
+
+    def get_market_price(self, symbol: str) -> float:
         """
         Place market order
         
